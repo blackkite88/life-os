@@ -3,28 +3,32 @@ import dotenv from 'dotenv';
 
 dotenv.config({ path: '../.env' });
 
-const groq = new Groq({
+export const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
 export async function streamChat(messages, systemPrompt, onData) {
   // Groq requires system prompt to be part of the messages array for standard chat completions
-  const apiMessages = [
-    { role: 'system', content: systemPrompt },
-    ...messages
-  ];
+  try {
+    const stream = await groq.chat.completions.create({
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...messages
+      ],
+      model: 'llama-3.1-8b-instant',
+      stream: true,
+      temperature: 0.7,
+      max_tokens: 1024
+    });
 
-  const stream = await groq.chat.completions.create({
-    messages: apiMessages,
-    model: 'llama-3.1-8b-instant', // Groq supported model
-    stream: true,
-  });
-
-  for await (const chunk of stream) {
-    const content = chunk.choices[0]?.delta?.content || '';
-    if (content) {
-      onData(content);
+    for await (const chunk of stream) {
+      const content = chunk.choices[0]?.delta?.content || '';
+      if (content) {
+        onData(content);
+      }
     }
+  } catch (error) {
+    console.error('Error streaming chat:', error);
   }
 }
 

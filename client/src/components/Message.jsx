@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactMarkdown from 'react-markdown';
 
 export default function Message({ role, content }) {
   const isUser = role === 'user';
@@ -9,8 +10,12 @@ export default function Message({ role, content }) {
         <div className="text-xs font-semibold mb-1 opacity-70">
           {isUser ? 'You' : 'OS'}
         </div>
-        <div className="whitespace-pre-wrap leading-relaxed">
-          {content}
+        <div className="whitespace-pre-wrap leading-relaxed markdown-body">
+          {content === '' && !isUser ? (
+            <span className="animate-pulse text-[var(--color-accent)] text-lg">● ● ●</span>
+          ) : (
+            <ReactMarkdown>{content}</ReactMarkdown>
+          )}
         </div>
       </div>
     </div>

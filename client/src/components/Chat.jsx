@@ -1,9 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Message from './Message';
-import { useChat } from '../hooks/useChat';
 
-export default function Chat() {
-  const { messages, sendMessage, isLoading } = useChat();
+export default function Chat({ messages, sendMessage, isLoading }) {
   const [input, setInput] = useState('');
   const endOfMessagesRef = useRef(null);
 

@@ -1,23 +1,83 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 export function useChat() {
-  const [messages, setMessages] = useState([]);
+  const [chats, setChats] = useState(() => {
+    const saved = localStorage.getItem('life-os-chats');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed.length > 0) return parsed;
+    }
+    return [{ id: Date.now().toString(), title: 'New Chat', messages: [] }];
+  });
+  
+  const [activeChatId, setActiveChatId] = useState(() => chats[0]?.id || Date.now().toString());
   const [isLoading, setIsLoading] = useState(false);
 
+  // Auto-save to localStorage
+  useEffect(() => {
+    localStorage.setItem('life-os-chats', JSON.stringify(chats));
+  }, [chats]);
+
+  const createNewChat = useCallback(() => {
+    const newChat = { id: Date.now().toString(), title: 'New Chat', messages: [] };
+    setChats(prev => [newChat, ...prev]);
+    setActiveChatId(newChat.id);
+  }, []);
+
+  const switchChat = useCallback((id) => {
+    setActiveChatId(id);
+  }, []);
+
+  const deleteChat = useCallback((id) => {
+    setChats(prev => {
+      const filtered = prev.filter(c => c.id !== id);
+      if (filtered.length === 0) {
+        const fallback = { id: Date.now().toString(), title: 'New Chat', messages: [] };
+        setActiveChatId(fallback.id);
+        return [fallback];
+      }
+      if (activeChatId === id) {
+        setActiveChatId(filtered[0].id);
+      }
+      return filtered;
+    });
+  }, [activeChatId]);
+
+  const activeChat = chats.find(c => c.id === activeChatId) || chats[0];
+
   const sendMessage = useCallback(async (text) => {
-    setMessages(prev => [...prev, { role: 'user', content: text }]);
+    // Determine title if it's the first message
+    let newTitle = activeChat.title;
+    if (activeChat.messages.length === 0) {
+      newTitle = text.length > 30 ? text.substring(0, 30) + '...' : text;
+    }
+
+    setChats(prev => prev.map(c => 
+      c.id === activeChatId 
+        ? { ...c, title: newTitle, messages: [...c.messages, { role: 'user', content: text }] }
+        : c
+    ));
+    
     setIsLoading(true);
 
     try {
+      // Get history up to this point
+      const history = activeChat.messages;
+      
       const res = await fetch('http://localhost:3001/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, history: messages })
+        body: JSON.stringify({ message: text, history })
       });
 
       if (!res.ok) throw new Error('Chat request failed');
 
-      setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
+      // Append empty assistant message placeholder
+      setChats(prev => prev.map(c => 
+        c.id === activeChatId 
+          ? { ...c, messages: [...c.messages, { role: 'assistant', content: '' }] }
+          : c
+      ));
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -39,15 +99,15 @@ export function useChat() {
             try {
               const data = JSON.parse(dataStr);
               if (data.text) {
-                setMessages(prev => {
-                  const newMessages = [...prev];
-                  const lastIndex = newMessages.length - 1;
-                  newMessages[lastIndex] = {
-                    ...newMessages[lastIndex],
-                    content: newMessages[lastIndex].content + data.text
-                  };
-                  return newMessages;
-                });
+                setChats(prev => prev.map(c => {
+                  if (c.id === activeChatId) {
+                    const msgs = [...c.messages];
+                    const lastIdx = msgs.length - 1;
+                    msgs[lastIdx] = { ...msgs[lastIdx], content: msgs[lastIdx].content + data.text };
+                    return { ...c, messages: msgs };
+                  }
+                  return c;
+                }));
               }
             } catch (e) {
               console.error('Error parsing SSE:', e);
@@ -60,7 +120,7 @@ export function useChat() {
     } finally {
       setIsLoading(false);
     }
-  }, [messages]);
+  }, [activeChat, activeChatId]);
 
-  return { messages, sendMessage, isLoading };
+  return { chats, activeChat, createNewChat, switchChat, deleteChat, sendMessage, isLoading };
 }

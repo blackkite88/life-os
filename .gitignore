@@ -2,6 +2,8 @@
 .env
 .env.*
 !.env.example
+google-tokens.json
+test-*.js
 
 # Node modules
 node_modules/

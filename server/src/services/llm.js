@@ -15,7 +15,7 @@ export async function streamChat(messages, systemPrompt, onData) {
         { role: 'system', content: systemPrompt },
         ...messages
       ],
-      model: 'llama-3.1-8b-instant',
+      model: 'llama-3.3-70b-versatile',
       stream: true,
       temperature: 0.7,
       max_tokens: 1024
@@ -34,7 +34,7 @@ export async function streamChat(messages, systemPrompt, onData) {
 
 export async function generateSummary(text) {
   const response = await groq.chat.completions.create({
-    model: 'llama-3.1-8b-instant',
+    model: 'llama-3.3-70b-versatile',
     messages: [
       { role: 'system', content: 'You are an AI assistant.' },
       { role: 'user', content: `Summarize the following text for a weekly review:\n\n${text}` }

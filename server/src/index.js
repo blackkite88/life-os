@@ -16,7 +16,7 @@ connectDB();
 
 const app = express();
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
+  origin: process.env.NODE_ENV === 'production'
     ? ['https://life-os-nine-henna.vercel.app', 'https://life-os-l97n.onrender.com']
     : ['http://localhost:3000', 'http://localhost:3001'],
   credentials: true

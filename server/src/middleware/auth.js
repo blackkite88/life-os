@@ -4,21 +4,27 @@ import dotenv from 'dotenv';
 dotenv.config({ path: '../.env' });
 
 export function authenticate(req, res, next) {
-  // Mock authentication for now
-  // In a real app, verify jwt from req.headers.authorization
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    // For local dev, bypass auth
-    req.user = { id: 1, name: 'Local User' };
-    return next();
+  // Read token from cookies instead of headers
+  const token = req.cookies?.auth_token;
+  
+  if (!token) {
+    req.user = null; // Ensure req.user is null if not authenticated
+    // For /api/auth/status we don't want to throw an error, just return not authenticated
+    if (req.path === '/status') {
+      return next(); 
+    }
+    return res.status(401).json({ error: 'Unauthorized' });
   }
   
   try {
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
+    req.user = decoded; // { userId: '...' }
     next();
   } catch (error) {
+    req.user = null;
+    if (req.path === '/status') {
+      return next();
+    }
     res.status(401).json({ error: 'Unauthorized' });
   }
 }

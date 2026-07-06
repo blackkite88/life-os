@@ -6,43 +6,46 @@ import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 
 const router = express.Router();
 
-let mcpClient = null;
-
-async function getMcpClient() {
-  if (mcpClient) return mcpClient;
-  
-  // Connect to our own MCP Server running on the same host using dynamic port
+async function getMcpClientForUser(userId) {
   const port = process.env.PORT || 3001;
-  const transport = new SSEClientTransport(new URL(`http://localhost:${port}/mcp/sse`));
+  const transport = new SSEClientTransport(
+    new URL(`http://localhost:${port}/mcp/sse`),
+    {
+      requestInit: {
+        headers: {
+          'x-user-id': userId // Pass the authenticated user ID to the internal MCP Server
+        }
+      }
+    }
+  );
+  
   const client = new Client({
-    name: "Life-OS-Chat",
+    name: `Life-OS-Chat-${userId}`,
     version: "1.0.0"
   }, {
     capabilities: {}
   });
   
   await client.connect(transport);
-  mcpClient = client;
   return client;
 }
 
 router.post('/', authenticate, async (req, res) => {
   const { message, history = [] } = req.body || {};
+  const userId = req.user?.userId;
 
-  if (!message) {
-    return res.status(400).json({ error: 'Message is required' });
-  }
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+  if (!message) return res.status(400).json({ error: 'Message is required' });
 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
 
   try {
-    const client = await getMcpClient();
+    const client = await getMcpClientForUser(userId);
     const toolsRes = await client.listTools();
     const mcpTools = toolsRes.tools || [];
     
-    // Map MCP Tools to Groq format
     const groqTools = mcpTools.map(t => ({
       type: "function",
       function: {
@@ -66,20 +69,13 @@ RULES:
 - Never hallucinate — if no data is found, say so plainly.
 - Keep tone conversational, concise, and human — like a helpful assistant.`;
 
-    let messages = [
-      ...history,
-      { role: 'user', content: message }
-    ];
-
+    let messages = [...history, { role: 'user', content: message }];
     let responseMsg = null;
 
     try {
       const initialResponse = await groq.chat.completions.create({
         model: 'llama-3.3-70b-versatile',
-        messages: [
-          { role: 'system', content: baseSystemPrompt },
-          ...messages
-        ],
+        messages: [{ role: 'system', content: baseSystemPrompt }, ...messages],
         tools: groqTools.length > 0 ? groqTools : undefined,
         tool_choice: "auto",
         temperature: 0.1
@@ -93,7 +89,6 @@ RULES:
       const toolCall = responseMsg.tool_calls[0];
       const args = JSON.parse(toolCall.function.arguments);
 
-      // Execute Tool via MCP Client
       const result = await client.callTool({
         name: toolCall.function.name,
         arguments: args
@@ -109,13 +104,11 @@ RULES:
         content: toolText
       });
 
-      // Stream final generated response after tool execution
       await streamChat(messages, baseSystemPrompt, (chunk) => {
         res.write(`data: ${JSON.stringify({ text: chunk })}\n\n`);
       });
 
     } else if (responseMsg && responseMsg.content) {
-      // No tool was called! Return the direct answer.
       res.write(`data: ${JSON.stringify({ text: responseMsg.content })}\n\n`);
     } else {
       res.write(`data: ${JSON.stringify({ text: "I'm sorry, I couldn't process that." })}\n\n`);

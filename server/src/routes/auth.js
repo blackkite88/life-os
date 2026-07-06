@@ -1,10 +1,13 @@
 import express from 'express';
-import { getAuthUrl, setCredentials, isAuthenticated } from '../services/google.js';
+import { getAuthUrl, processOAuthCallback } from '../services/google.js';
+import jwt from 'jsonwebtoken';
+import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
 
-router.get('/status', (req, res) => {
-  res.json({ authenticated: isAuthenticated() });
+router.get('/status', authenticate, (req, res) => {
+  // If the authenticate middleware passes, they have a valid session
+  res.json({ authenticated: !!req.user });
 });
 
 router.get('/google', (req, res) => {
@@ -19,7 +22,23 @@ router.get('/callback', async (req, res) => {
   }
 
   try {
-    await setCredentials(code);
+    const user = await processOAuthCallback(code);
+    
+    // Create JWT
+    const token = jwt.sign(
+      { userId: user._id.toString() }, 
+      process.env.JWT_SECRET || 'fallback-secret', 
+      { expiresIn: '7d' }
+    );
+    
+    // Set HTTP-only cookie
+    res.cookie('auth_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+
     res.send(`
       <html>
         <body>
@@ -37,6 +56,12 @@ router.get('/callback', async (req, res) => {
     console.error("Auth callback error:", err);
     res.status(500).send("Authentication failed");
   }
+});
+
+// Allow logging out
+router.post('/logout', (req, res) => {
+  res.clearCookie('auth_token');
+  res.json({ success: true });
 });
 
 export default router;

@@ -12,7 +12,7 @@ function App() {
   const { chats, activeChat, createNewChat, switchChat, deleteChat, sendMessage, isLoading } = useChat();
 
   useEffect(() => {
-    fetch(`${API_URL}/api/auth/status`)
+    fetch(`${API_URL}/api/auth/status`, { credentials: 'include' })
       .then(res => res.json())
       .then(data => setIsAuthenticated(data.authenticated))
       .catch(err => {

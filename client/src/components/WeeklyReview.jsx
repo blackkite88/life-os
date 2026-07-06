@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
+import { API_URL } from '../config';
 
 export default function WeeklyReview({ onClose }) {
   const [review, setReview] = useState(null);
@@ -8,7 +10,7 @@ export default function WeeklyReview({ onClose }) {
   useEffect(() => {
     const fetchReview = async () => {
       try {
-        const res = await fetch('http://localhost:3001/api/review');
+        const res = await fetch(`${API_URL}/api/review`);
         if (res.ok) {
           const data = await res.json();
           setReview(data);
@@ -26,7 +28,7 @@ export default function WeeklyReview({ onClose }) {
   const handleGenerate = async () => {
     setGenerating(true);
     try {
-      const res = await fetch('http://localhost:3001/api/review/generate', { method: 'POST' });
+      const res = await fetch(`${API_URL}/api/review/generate`, { method: 'POST' });
       if (res.ok) {
         const data = await res.json();
         setReview(data);

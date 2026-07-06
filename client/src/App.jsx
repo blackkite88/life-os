@@ -5,6 +5,7 @@ import WeeklyReview from './components/WeeklyReview';
 import LoginPage from './components/LoginPage';
 
 import { useChat } from './hooks/useChat';
+import { API_URL } from './config';
 
 function App() {
   const [showReview, setShowReview] = useState(false);
@@ -13,7 +14,7 @@ function App() {
   const { chats, activeChat, createNewChat, switchChat, deleteChat, sendMessage, isLoading } = useChat();
 
   useEffect(() => {
-    fetch('http://localhost:3001/api/auth/status')
+    fetch(`${API_URL}/api/auth/status`)
       .then(res => res.json())
       .then(data => setIsAuthenticated(data.authenticated))
       .catch(err => {

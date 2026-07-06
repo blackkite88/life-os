@@ -11,8 +11,9 @@ let mcpClient = null;
 async function getMcpClient() {
   if (mcpClient) return mcpClient;
   
-  // Connect to our own MCP Server running on the same host
-  const transport = new SSEClientTransport(new URL("http://localhost:3001/mcp/sse"));
+  // Connect to our own MCP Server running on the same host using dynamic port
+  const port = process.env.PORT || 3001;
+  const transport = new SSEClientTransport(new URL(`http://localhost:${port}/mcp/sse`));
   const client = new Client({
     name: "Life-OS-Chat",
     version: "1.0.0"

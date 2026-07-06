@@ -1,17 +1,18 @@
 import React from 'react';
+import { API_URL } from '../config';
 
 export default function LoginPage({ onLoginSuccess }) {
   const [checking, setChecking] = React.useState(false);
 
   const handleGoogleLogin = () => {
     // Open Google OAuth popup
-    const popup = window.open('http://localhost:3001/api/auth/google', 'Google Login', 'width=500,height=600');
+    const popup = window.open(`${API_URL}/api/auth/google`, 'Google Login', 'width=500,height=600');
     setChecking(true);
     
     // Poll to check if authenticated
     const interval = setInterval(async () => {
       try {
-        const res = await fetch('http://localhost:3001/api/auth/status', { cache: 'no-store' });
+        const res = await fetch(`${API_URL}/api/auth/status`, { cache: 'no-store' });
         const data = await res.json();
         if (data.authenticated) {
           clearInterval(interval);

@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { API_URL } from '../config';
 
 export function useChat() {
   const [chats, setChats] = useState(() => {
@@ -64,7 +65,7 @@ export function useChat() {
       // Get history up to this point
       const history = activeChat.messages;
       
-      const res = await fetch('http://localhost:3001/api/chat', {
+      const res = await fetch(`${API_URL}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text, history })

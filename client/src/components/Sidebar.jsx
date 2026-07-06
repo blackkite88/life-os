@@ -1,7 +1,6 @@
 import React from 'react';
 
-export default function Sidebar({ onReviewClick, chats = [], activeChatId, createNewChat, switchChat, deleteChat }) {
-
+export default function Sidebar({ chats = [], activeChatId, createNewChat, switchChat, deleteChat }) {
 
   return (
     <div className="w-64 bg-gray-800 p-4 flex flex-col h-full border-r border-gray-700">
@@ -36,16 +35,6 @@ export default function Sidebar({ onReviewClick, chats = [], activeChatId, creat
             </li>
           ))}
         </ul>
-      </div>
-
-      <div>
-
-        <button
-          onClick={onReviewClick}
-          className="w-full bg-[var(--color-accent)] hover:bg-teal-600 text-gray-900 font-bold py-2 px-4 rounded-lg transition-colors text-sm"
-        >
-          Weekly Review
-        </button>
       </div>
     </div>
   );

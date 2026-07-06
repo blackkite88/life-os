@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Chat from './components/Chat';
-import WeeklyReview from './components/WeeklyReview';
 import LoginPage from './components/LoginPage';
 
 import { useChat } from './hooks/useChat';
@@ -38,6 +37,12 @@ function App() {
         createNewChat={createNewChat}
         switchChat={switchChat}
         deleteChat={deleteChat}
+      />
+
+      <Chat
+        messages={activeChat?.messages || []}
+        sendMessage={sendMessage}
+        isLoading={isLoading}
       />
     </div>
   );

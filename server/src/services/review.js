@@ -1,4 +1,4 @@
-import { getCollection } from './vectordb.js';
+import { searchEmailsLive, searchDriveLive } from './google.js';
 import { generateSummary } from './llm.js';
 
 let latestReview = null;
@@ -6,18 +6,21 @@ let latestReview = null;
 export async function generateWeeklyReview() {
   console.log("Generating Weekly Review...");
   try {
-    const collection = await getCollection();
-    const result = await collection.get({
-      limit: 20 // Get recent docs
-    });
+    const emails = await searchEmailsLive('newer_than:7d', 10);
+    const docs = await searchDriveLive('', 5);
+
+    let combinedText = "RECENT EMAILS:\n\n";
+    emails.forEach(e => combinedText += `From: ${e.from}\nSubject: ${e.subject}\nBody: ${e.content}\n\n`);
     
-    if (!result.documents || result.documents.length === 0) {
-      latestReview = "No recent documents found for review.";
+    combinedText += "\n\nRECENT DOCUMENTS:\n\n";
+    docs.forEach(d => combinedText += `Title: ${d.name}\nContent: ${d.content}\n\n`);
+
+    if (emails.length === 0 && docs.length === 0) {
+      latestReview = { date: new Date().toISOString(), content: "No recent activity found to review." };
       return;
     }
 
-    const combinedDocs = result.documents.join("\n\n---\n\n");
-    const summary = await generateSummary(combinedDocs);
+    const summary = await generateSummary(combinedText);
     
     latestReview = {
       date: new Date().toISOString(),

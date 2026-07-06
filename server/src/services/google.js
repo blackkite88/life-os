@@ -246,3 +246,45 @@ export async function searchEmailsLive(query, maxResults = 3) {
   
   return emails;
 }
+
+// New function for live MCP Drive searches
+export async function searchDriveLive(query, maxResults = 3) {
+  if (!userCredential) throw new Error("Not authenticated");
+  
+  const drive = google.drive({ version: 'v3', auth: oauth2Client });
+  const docs = [];
+  
+  try {
+    const res = await drive.files.list({
+      q: `fullText contains '${query.replace(/'/g, "\\'")}' and mimeType='application/vnd.google-apps.document'`,
+      pageSize: maxResults,
+      fields: 'files(id, name, mimeType)'
+    });
+    
+    const files = res.data.files;
+    if (!files || files.length === 0) return [];
+    
+    for (const file of files) {
+      const exportRes = await drive.files.export({
+        fileId: file.id,
+        mimeType: 'text/plain'
+      });
+      
+      let text = exportRes.data;
+      if (typeof text !== 'string') text = JSON.stringify(text);
+      
+      const cleanText = text.replace(/\s+/g, ' ').trim().substring(0, 1500); // chunk it
+      const link = `https://docs.google.com/document/d/${file.id}/edit`;
+      
+      docs.push({
+        name: file.name,
+        content: cleanText,
+        link
+      });
+    }
+  } catch (error) {
+    console.error("Live drive search error:", error);
+  }
+  
+  return docs;
+}
